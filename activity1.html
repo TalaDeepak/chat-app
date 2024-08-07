@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Application</title>
+    <link rel="stylesheet" href="activity5.css" />
+  </head>
+  <body>
+    <div class="login-container">
+      <input
+        type="text"
+        id="username-input"
+        placeholder="Enter your username"
+      />
+      <button id="join-chat-button">Join Chat</button>
+    </div>
+
+    <div class="chat-container hidden">
+      <div class="chat-window">
+        <div class="message-container">
+          <!-- Messages will be dynamically added here -->
+        </div>
+      </div>
+      <div class="input-area">
+        <input
+          type="text"
+          id="chat-input"
+          placeholder="Type your message here..."
+        />
+        <button id="send-button">Send</button>
+      </div>
+    </div>
+
+    <script>
+      let username = "";
+
+      document
+        .getElementById("join-chat-button")
+        .addEventListener("click", () => {
+          const usernameInput = document.getElementById("username-input");
+          username = usernameInput.value.trim();
+
+          if (username !== "") {
+            document.querySelector(".login-container").classList.add("hidden");
+            document
+              .querySelector(".chat-container")
+              .classList.remove("hidden");
+
+            // Establish WebSocket connection
+            const ws = new WebSocket("ws://localhost:8080");
+
+            ws.onopen = () => {
+              console.log("Connected to the WebSocket server.");
+            };
+
+            ws.onmessage = (event) => {
+              const data = JSON.parse(event.data);
+              displayMessage(
+                data.username,
+                data.message,
+                data.username === username ? "own" : "other"
+              );
+            };
+
+            ws.onclose = () => {
+              console.log("Disconnected from the WebSocket server.");
+            };
+
+            ws.onerror = (error) => {
+              console.error(`WebSocket error: ${error.message}`);
+            };
+
+            // Function to display messages in the chat window
+            function displayMessage(sender, message, type) {
+              const messageContainer =
+                document.querySelector(".message-container");
+              const newMessage = document.createElement("div");
+              newMessage.className = `message ${type}`;
+              newMessage.textContent = `${sender}: ${message}`;
+              messageContainer.appendChild(newMessage);
+
+              // Scroll to the latest message
+              messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
+
+            // Event listener to send messages
+            document
+              .getElementById("send-button")
+              .addEventListener("click", () => {
+                const inputField = document.getElementById("chat-input");
+                const message = inputField.value.trim();
+
+                if (message !== "") {
+                  const data = { username, message };
+                  ws.send(JSON.stringify(data));
+                  displayMessage("You", message, "own");
+                  inputField.value = "";
+                }
+              });
+
+            // Allow sending messages with the Enter key
+            document
+              .getElementById("chat-input")
+              .addEventListener("keypress", (event) => {
+                if (event.key === "Enter") {
+                  document.getElementById("send-button").click();
+                }
+              });
+          }
+        });
+    </script>
+  </body>
+</html>
